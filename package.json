@@ -1,0 +1,67 @@
+{
+  "name": "@clockwork/tiptap-editor",
+  "version": "0.1.0",
+  "description": "Clockwork rich text editor built on Tiptap. Drop-in replacement for the CKEditor 5 custom build, byte-compatible with existing note HTML.",
+  "license": "UNLICENSED",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "style": "./dist/style.css",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./style.css": "./dist/style.css"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "scripts": {
+    "build": "vite build && tsc -p tsconfig.build.json --emitDeclarationOnly",
+    "dev": "vite build --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepare": "yarn build"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "dependencies": {
+    "@tiptap/core": "^3",
+    "@tiptap/extension-heading": "^3",
+    "@tiptap/extension-horizontal-rule": "^3",
+    "@tiptap/extension-image": "^3",
+    "@tiptap/extension-link": "^3",
+    "@tiptap/extension-text-style": "^3",
+    "@tiptap/extension-typography": "^3",
+    "@tiptap/extensions": "^3",
+    "@tiptap/pm": "^3",
+    "@tiptap/react": "^3",
+    "@tiptap/starter-kit": "^3",
+    "@tiptap/suggestion": "^3"
+  },
+  "devDependencies": {
+    "@floating-ui/dom": "^1",
+    "@types/node": "^26.2.0",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "@vitejs/plugin-react": "^4",
+    "jsdom": "^25",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "typescript": "^5",
+    "vite": "^6",
+    "vite-plugin-dts": "^5.0.3",
+    "vitest": "^2"
+  }
+}
