@@ -18,6 +18,12 @@ export interface MentionSuggestState {
   query: string;
   /** Set while a drill-down ("Candidates >") list is open. */
   clickedItem?: MentionFeedItem;
+  /**
+   * Bumped on every drill-down or back click. The row that opens a section and
+   * the row that leaves it are the same item with the same id, so without this
+   * the second click would look like a repeat of the first and be skipped.
+   */
+  clickCount?: number;
 }
 
 export interface MentionSuggestOptions {
@@ -116,7 +122,13 @@ export const MentionSuggest = Extension.create<MentionSuggestOptions>({
       if (item.nestedFeedId) {
         if (!item.isClickable) return;
 
-        view.dispatch(view.state.tr.setMeta(mentionPluginKey, { ...state, clickedItem: item }));
+        view.dispatch(
+          view.state.tr.setMeta(mentionPluginKey, {
+            ...state,
+            clickedItem: item,
+            clickCount: (state.clickCount ?? 0) + 1
+          })
+        );
 
         return;
       }
@@ -165,6 +177,14 @@ export const MentionSuggest = Extension.create<MentionSuggestOptions>({
 
       requestToken += 1;
       const token = requestToken;
+
+      // Show a spinner straight away when there is nothing on screen yet, so
+      // typing a marker never looks like it did nothing. A feed that returns its
+      // own loading row synchronously replaces this immediately.
+      if (!dropdown?.currentItems.length) {
+        dropdown?.renderLoading();
+        dropdown?.open(caretPosition(view, state));
+      }
 
       const updateFeed = (items: MentionFeedItem[]) => {
         if (token !== requestToken) return;
@@ -308,7 +328,7 @@ export const MentionSuggest = Extension.create<MentionSuggestOptions>({
 
               if (dropdown?.isOpen) dropdown.setPosition(caretPosition(view, state));
 
-              const requestKey = `${state.marker}|${state.query}|${state.clickedItem?.nestedFeedId ?? ''}|${state.clickedItem?.id ?? ''}`;
+              const requestKey = `${state.marker}|${state.query}|${state.clickCount ?? 0}`;
               if (requestKey === lastRequestKey) return;
 
               lastRequestKey = requestKey;

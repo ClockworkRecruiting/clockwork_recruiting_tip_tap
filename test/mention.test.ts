@@ -1,5 +1,6 @@
+import { act } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { mentionPluginKey } from '../src/extensions/mention';
+import { MentionDropdown, mentionPluginKey } from '../src/extensions/mention';
 import serializeToCkHtml from '../src/html/serialize';
 import { createEditor, APP_CONFIG } from './helpers';
 import type { MentionFeedItem } from '../src/types';
@@ -20,7 +21,16 @@ const PERSON: MentionFeedItem = {
   link: 'https://app.test/firm/people/42'
 };
 
+/** Mirrors the app's `customItemRenderer`, including its spinner rows. */
 const itemRenderer = (item: MentionFeedItem) => {
+  if (item.id === 'loading-spinner' || item.id === 'pagination-spinner') {
+    const spinner = document.createElement('div');
+    spinner.className = item.id === 'pagination-spinner' ? 'pagination-loading' : 'feed-loading';
+    spinner.innerHTML = '<div class="loading-spinner"></div>';
+
+    return spinner;
+  }
+
   const element = document.createElement('span');
   element.className = item.nestedFeedId ? 'mention-list-item--list-type' : 'mention-list-item';
   element.textContent = String(item.name || item.id);
@@ -168,6 +178,132 @@ describe('mention dropdown', () => {
     expect(mentionPluginKey.getState(editor.state)).toBeNull();
 
     editor.destroy();
+  });
+
+  it('goes back out of a section, even though the back row is the same item', async () => {
+    // Drilling in and coming back out are the same row: same id, same
+    // nestedFeedId, only the view flags differ.
+    const IN_ROW = { ...NESTED_ROW, isNestedView: true, isSingleView: false };
+    const BACK_ROW = { ...NESTED_ROW, isNestedView: false, isSingleView: true };
+
+    const feed = vi.fn((_text: string, clickedItem?: MentionFeedItem) =>
+      clickedItem?.isNestedView ? [BACK_ROW, PERSON] : [IN_ROW, PERSON]
+    );
+
+    const editor = editorWithFeed(feed);
+
+    editor.commands.insertContent('@');
+    await flush();
+
+    // Into the section.
+    (openRows()[0].firstElementChild as HTMLElement).dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    await flush();
+    expect(feed).toHaveBeenCalledTimes(2);
+    expect(feed.mock.calls[1][1]).toMatchObject({ isNestedView: true });
+
+    // Back out again.
+    (openRows()[0].firstElementChild as HTMLElement).dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    await flush();
+    expect(feed).toHaveBeenCalledTimes(3);
+    expect(feed.mock.calls[2][1]).toMatchObject({ isSingleView: true });
+
+    editor.destroy();
+  });
+
+  it('grows the list for each page a paginating feed pushes, keeping the row the host observes', async () => {
+    const page = (from: number, count: number) =>
+      Array.from({ length: count }, (_unused, index) => ({
+        ...PERSON,
+        id: `@Person ${from + index}`,
+        name: `Person ${from + index}`,
+        idValue: String(from + index)
+      }));
+
+    const spinnerRow = { id: 'pagination-spinner', name: 'pagination-spinner', isDisabled: true };
+    let pushMore: ((items: MentionFeedItem[]) => void) | null = null;
+
+    const feed = (_text: string, _clickedItem: unknown, updateFeed: (items: MentionFeedItem[]) => void) => {
+      pushMore = updateFeed;
+
+      return [NESTED_ROW, ...page(1, 3), spinnerRow];
+    };
+
+    const editor = editorWithFeed(feed);
+
+    editor.commands.insertContent('@');
+    await flush();
+
+    expect(openRows()).toHaveLength(5);
+    expect(document.querySelector('.pagination-loading')).toBeTruthy();
+
+    // What the host's IntersectionObserver handler does when the next page lands.
+    const list = document.querySelector('.cw-mentions') as HTMLElement;
+    list.scrollTop = 24;
+
+    act(() => {
+      pushMore!([NESTED_ROW, ...page(1, 6), spinnerRow]);
+    });
+
+    expect(openRows()).toHaveLength(8);
+    expect(document.querySelector('.pagination-loading')).toBeTruthy();
+    // The list must not jump back to the top between pages.
+    expect(list.scrollTop).toBe(24);
+
+    editor.destroy();
+  });
+
+  it('shows a loader while the first page is in flight', async () => {
+    const editor = editorWithFeed(
+      () =>
+        new Promise((resolve) => {
+          setTimeout(() => resolve([NESTED_ROW, PERSON]), 60);
+        })
+    );
+
+    editor.commands.insertContent('@');
+    await flush(120);
+
+    expect(document.querySelector('.cw-mentions__loading')).toBeTruthy();
+
+    await flush(120);
+
+    expect(document.querySelector('.cw-mentions__loading')).toBeNull();
+    expect(openRows()).toHaveLength(2);
+
+    editor.destroy();
+  });
+
+  it('never scrolls the list sideways, which would clip the row labels', async () => {
+    const editor = editorWithFeed(() => [NESTED_ROW, PERSON]);
+
+    editor.commands.insertContent('@');
+    await flush();
+
+    const list = document.querySelector('.cw-mentions') as HTMLElement;
+    list.scrollLeft = 40;
+
+    editor.view.someProp('handleKeyDown', (handler) => handler(editor.view, new KeyboardEvent('keydown', { key: 'ArrowDown' })));
+
+    expect(list.scrollLeft).toBe(0);
+
+    editor.destroy();
+  });
+
+  it('keeps the panel on screen whichever edge the caret is near', () => {
+    const dropdown = new MentionDropdown({ onSelect: () => {} });
+    dropdown.render([PERSON], { itemRenderer });
+
+    const panelWidth = 360; // jsdom reports no layout, so the fallback width applies
+    const margin = 8;
+
+    dropdown.open({ left: 5000, top: 100, bottom: 120 });
+    const panel = document.querySelector('.cw-mentions-panel') as HTMLElement;
+    expect(panel.style.left).toBe(`${Math.max(margin, window.innerWidth - panelWidth - margin)}px`);
+
+    dropdown.setPosition({ left: -200, top: 100, bottom: 120 });
+    expect(panel.style.left).toBe(`${margin}px`);
+
+    dropdown.destroy();
   });
 
   it('never inserts a disabled row', async () => {

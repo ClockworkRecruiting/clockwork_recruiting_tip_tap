@@ -116,8 +116,25 @@ export class MentionDropdown {
 
     if (!scroll || index < 0) return;
 
-    const selected = this.list.children[index] as HTMLElement | undefined;
-    if (typeof selected?.scrollIntoView === 'function') selected.scrollIntoView({ block: 'nearest' });
+    this.scrollRowIntoView(index);
+  }
+
+  /**
+   * Scrolls the list vertically only. `scrollIntoView` also adjusts the
+   * horizontal offset, which shifts the rows sideways and cuts the start off
+   * every label.
+   */
+  private scrollRowIntoView(index: number): void {
+    const row = this.list.children[index] as HTMLElement | undefined;
+    if (!row) return;
+
+    const top = row.offsetTop;
+    const bottom = top + row.offsetHeight;
+
+    if (top < this.list.scrollTop) this.list.scrollTop = top;
+    else if (bottom > this.list.scrollTop + this.list.clientHeight) this.list.scrollTop = bottom - this.list.clientHeight;
+
+    this.list.scrollLeft = 0;
   }
 
   selectFirstSelectable(startAt = 0): void {
@@ -141,18 +158,49 @@ export class MentionDropdown {
     this.selectIndex(next);
   }
 
+  /** Shown while the first page of a feed is in flight and there is nothing yet. */
+  renderLoading(): void {
+    this.items = [];
+    this.selectedIndex = -1;
+    this.list.textContent = '';
+
+    const row = document.createElement('li');
+    row.className = 'ck ck-list__item';
+
+    const body = document.createElement('div');
+    body.className = 'cw-mentions__loading';
+    body.setAttribute('aria-live', 'polite');
+
+    const spinner = document.createElement('span');
+    spinner.className = 'cw-mentions__spinner';
+
+    const label = document.createElement('span');
+    label.textContent = 'Searching';
+
+    body.append(spinner, label);
+    row.appendChild(body);
+    this.list.appendChild(row);
+  }
+
   open(position: { left: number; top: number; bottom: number }): void {
     if (!this.panel.isConnected) bodyWrapper().appendChild(this.panel);
     this.setPosition(position);
   }
 
   setPosition({ left, top, bottom }: { left: number; top: number; bottom: number }): void {
+    const margin = 8;
     const panelHeight = this.panel.offsetHeight || 320;
+    const panelWidth = this.panel.offsetWidth || 360;
     const spaceBelow = window.innerHeight - bottom;
     const openUpwards = spaceBelow < panelHeight && top > panelHeight;
 
+    // Keep the whole panel on screen: a caret near the right edge would otherwise
+    // push it out of view, and one near the left would clip its start.
+    const maxLeft = Math.max(margin, window.innerWidth - panelWidth - margin);
+    const clampedLeft = Math.min(Math.max(left, margin), maxLeft);
+
     this.panel.style.position = 'absolute';
-    this.panel.style.left = `${Math.round(left + window.scrollX)}px`;
+    this.panel.style.left = `${Math.round(clampedLeft + window.scrollX)}px`;
     this.panel.style.top = openUpwards
       ? `${Math.round(top + window.scrollY - panelHeight)}px`
       : `${Math.round(bottom + window.scrollY)}px`;

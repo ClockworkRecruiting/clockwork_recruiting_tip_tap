@@ -14,7 +14,6 @@ export const MentionMark = Mark.create({
   name: 'mention',
   inclusive: false,
   spanning: false,
-  excludes: '_',
 
   addAttributes() {
     return {

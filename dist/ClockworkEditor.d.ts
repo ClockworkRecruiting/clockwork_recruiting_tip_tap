@@ -20,6 +20,13 @@ export interface ClockworkEditorProps {
     /** Height of the scrolling content area, in px. */
     height?: number;
     resizable?: boolean;
+    /**
+     * Reports the height of the scrolling content area after the user drags the
+     * resize handle. It is the height of the very element `height` sizes, so
+     * feeding the value back in through `height` is stable: measuring an outer
+     * element instead would grow the editor on every round trip.
+     */
+    onResize?: (height: number) => void;
     className?: string;
     autoFocus?: boolean;
     /** Forces the content prop back into the editor, like CKEditor's `setData`. */

@@ -176,3 +176,23 @@ export const RedoIcon = () =>
       />
     </g>
   );
+
+export const CheckIcon = () =>
+  svg(<path d="M7.6 13.4 4.2 10l-1.4 1.4 4.8 4.8L17.2 6.6 15.8 5.2l-8.2 8.2Z" fill="currentColor" />);
+
+export const MoreIcon = () =>
+  svg(
+    <>
+      {[5, 10, 15].map((x) => (
+        <circle key={x} cx={x} cy="10" r="1.7" fill="currentColor" />
+      ))}
+    </>
+  );
+
+export const TrashIcon = () =>
+  svg(
+    <>
+      <path d="M5.5 6.5h9l-.8 10a1.2 1.2 0 0 1-1.2 1.1H7.5a1.2 1.2 0 0 1-1.2-1.1l-.8-10Z" fill="currentColor" />
+      <path d="M8 4.2c0-.6.5-1.1 1.1-1.1h1.8c.6 0 1.1.5 1.1 1.1v.6H8v-.6ZM3.8 5h12.4v1.6H3.8V5Z" fill="currentColor" />
+    </>
+  );

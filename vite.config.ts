@@ -20,6 +20,9 @@ export default defineConfig({
     cssCodeSplit: false,
     // dist/ is committed for the git dependency; source maps would add ~4MB per build.
     sourcemap: false,
-    emptyOutDir: true
+    // dist/ is committed and consumed through a symlink during local development:
+    // emptying it first leaves the app with an unresolvable package if a watch build
+    // is interrupted. File names are fixed, so overwriting in place is enough.
+    emptyOutDir: false
   }
 });

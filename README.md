@@ -19,11 +19,34 @@ The core app consumes this the same way it consumed the CKEditor build: a GitHub
 pinned to a commit.
 
 ```json
-"@clockwork/tiptap-editor": "https://github.com/ClockworkRecruiting/clockwork-tiptap-editor.git#<commit-sha>"
+"@clockwork/tiptap-editor": "https://github.com/bhavesh-kreeti/tip-tap-clockwork.git#<commit-sha>"
 ```
 
-`dist/` is committed, so `yarn install` needs no build step. `prepare` also rebuilds it
-if the consumer installs from a working copy.
+`dist/` is committed, so `yarn install` needs no build step and no dev dependencies:
+installs stay fast and CI/Docker builds cannot fail on a package build. The flip side is
+that **`yarn build` must be run and `dist/` committed with every source change**.
+
+### Local development against the core app
+
+While iterating on both sides at once, point the app at a local checkout instead of the
+pinned commit:
+
+```json
+"@clockwork/tiptap-editor": "link:../clockwork-tiptap-editor"
+```
+
+`link:` symlinks rather than copies, so `yarn build` here is picked up by the app on the
+next Vite restart, with no reinstall. Two things the app side needs for that to work, both
+already in place in the core repo:
+
+- `resolve.dedupe: ["react", "react-dom"]` in `vite.config.mts` and the matching
+  `moduleNameMapper` entries in `jest.config.json`. A linked package resolves `react` from
+  its own `node_modules` first, and two React copies break hooks.
+- `"@clockwork/tiptap-editor"` in `optimizeDeps.include`, because Vite does not pre-bundle
+  linked packages by default.
+
+Swap the spec back to the pinned GitHub URL (the sha of the commit you push) before the app
+branch is merged: `link:` fails in CI, where the sibling directory does not exist.
 
 ## Usage
 
@@ -48,6 +71,19 @@ import '@clockwork/tiptap-editor/style.css';
 
 `onReady` hands back a small API that mirrors the CKEditor instance methods the wrappers
 used: `getData()`, `setData(html)`, `focus()`, `destroy()`, plus the raw `editor`.
+
+`onResize(height)` reports the height of the scrolling area, which is the element the
+`height` prop sizes. Persisting that value and feeding it back in is therefore stable;
+measuring an outer element instead grows the editor on every round trip.
+
+### Toolbar layout
+
+The toolbar is one row. Adjacent items of the same kind form a group (text, style, lists,
+indent, insert, image), separated by a hairline, and a group is the unit that moves into
+the overflow menu when the row runs out of width, so related controls never split across
+a break. Group membership follows the order in `config.toolbar`, so reordering the config
+reorders the groups. Where there is no layout to measure (a hidden editor, a test
+environment) every group stays visible.
 
 ### Image upload
 
@@ -86,6 +122,8 @@ fork added:
 - `item.nestedFeedId` + `item.isClickable` makes a drill-down row: picking it re-requests
   the feed with the row as `clickedItem` instead of inserting anything.
 - `item.onSelect({ selectedItem, marker })` fires before either behaviour.
+- Going back out of a section is the same drill-down row with `isSingleView` set, so
+  identical rows clicked twice are treated as two distinct requests rather than a repeat.
 - The dropdown renders `.ck-body-wrapper > .ck-balloon-panel > ul.ck-mentions >
   li.ck-list__item > .ck-button`, the DOM CKEditor produced, because the app styles those
   class names and `useMentions` reaches into `.ck-list__item` and `.pagination-loading`.

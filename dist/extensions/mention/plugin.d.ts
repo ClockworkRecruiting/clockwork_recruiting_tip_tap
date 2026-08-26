@@ -9,6 +9,12 @@ export interface MentionSuggestState {
     query: string;
     /** Set while a drill-down ("Candidates >") list is open. */
     clickedItem?: MentionFeedItem;
+    /**
+     * Bumped on every drill-down or back click. The row that opens a section and
+     * the row that leaves it are the same item with the same id, so without this
+     * the second click would look like a repeat of the first and be skipped.
+     */
+    clickCount?: number;
 }
 export interface MentionSuggestOptions {
     feeds: MentionFeedConfig[];

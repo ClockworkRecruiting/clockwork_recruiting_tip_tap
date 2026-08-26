@@ -1,244 +1,523 @@
 /*
- * Chrome for the Clockwork Tiptap editor.
+ * Chrome for the Clockwork Tiptap editor: shell, toolbar, menus and popovers.
  *
- * The visual language deliberately follows the CKEditor classic build the app
- * used before, so note forms keep their current look. Content classes that the
- * app already ships (`text-tiny`, `marker-yellow`, `image-style-align-left`,
- * `.mention`) are styled by the app stylesheet and repeated here only for the
- * editing surface, so the package also looks right on its own.
+ * Content classes the app already ships (`text-tiny`, `marker-yellow`,
+ * `image-style-align-left`, `.mention`) are styled by the app stylesheet; the
+ * rules here cover the editing surface so the package also looks right alone.
  */
 
 .cw-editor {
-  --cw-border: #ccced1;
-  --cw-border-focus: #94a3b8;
-  --cw-toolbar-bg: #fafafa;
-  --cw-text: #333;
-  --cw-hover: #eef1f4;
-  --cw-active: #dbe4ec;
+  --cw-radius: 10px;
+  --cw-radius-sm: 7px;
+  --cw-border: #dfe4ec;
+  --cw-border-strong: #cbd3df;
+  --cw-surface: #fff;
+  --cw-surface-sunken: #fbfcfe;
+  --cw-fg: #1f2937;
+  --cw-fg-muted: #64748b;
+  --cw-hover: #f1f5f9;
+  --cw-accent: #0b74e5;
+  --cw-accent-fg: #fff;
+  --cw-accent-soft: #e7f1fd;
+  --cw-accent-ring: rgba(11, 116, 229, 0.18);
+  --cw-danger: #d64545;
+  --cw-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --cw-shadow-lg: 0 1px 2px rgba(15, 23, 42, 0.06), 0 12px 28px -8px rgba(15, 23, 42, 0.22);
 
-  border: 1px solid var(--cw-border);
-  border-radius: 2px;
-  background: #fff;
-  color: var(--cw-text);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: visible;
+  border: 1px solid var(--cw-border);
+  border-radius: var(--cw-radius);
+  background: var(--cw-surface);
+  color: var(--cw-fg);
+  box-shadow: var(--cw-shadow-sm);
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.cw-editor:focus-within {
+  border-color: var(--cw-accent);
+  box-shadow: 0 0 0 3px var(--cw-accent-ring);
 }
 
 .cw-editor--disabled {
-  background: #f7f7f7;
-  opacity: 0.75;
+  background: var(--cw-surface-sunken);
+  box-shadow: none;
+}
+
+.cw-editor--disabled .cw-toolbar {
+  opacity: 0.5;
+  pointer-events: none;
 }
 
 /* Toolbar ---------------------------------------------------------------- */
 
 .cw-toolbar {
+  position: relative;
+  z-index: 2;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 2px;
-  padding: 4px;
-  background: var(--cw-toolbar-bg);
-  border-bottom: 1px solid var(--cw-border);
-}
-
-.cw-toolbar[data-should-wrap='false'] {
   flex-wrap: nowrap;
-  overflow-x: auto;
+  gap: 2px;
+  min-width: 0;
+  padding: 5px 6px;
+  border-bottom: 1px solid var(--cw-border);
+  background: var(--cw-surface);
+  border-radius: var(--cw-radius) var(--cw-radius) 0 0;
 }
 
-.cw-toolbar__slot {
-  display: inline-flex;
+.cw-toolbar__group {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  flex: 0 0 auto;
 }
 
-.cw-toolbar__separator {
+/* Hairline between groups, never before the first or after the last. */
+.cw-toolbar__group + .cw-toolbar__group::before {
+  content: '';
+  align-self: stretch;
   width: 1px;
-  height: 20px;
-  margin: 0 4px;
+  margin: 4px 5px;
   background: var(--cw-border);
 }
 
-.cw-toolbar__button {
+.cw-toolbar__overflow {
+  display: flex;
+  margin-left: auto;
+  padding-left: 4px;
+}
+
+/* Inside the overflow popover the same groups stack and wrap. */
+.cw-toolbar--stacked {
+  flex-wrap: wrap;
+  max-width: 264px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  row-gap: 2px;
+}
+
+.cw-toolbar--stacked .cw-toolbar__group + .cw-toolbar__group::before {
+  display: none;
+}
+
+.cw-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  min-width: 28px;
-  height: 28px;
+  gap: 1px;
+  height: 30px;
+  min-width: 30px;
   padding: 0 5px;
-  border: 1px solid transparent;
-  border-radius: 2px;
+  border: 0;
+  border-radius: var(--cw-radius-sm);
   background: transparent;
-  color: var(--cw-text);
-  cursor: pointer;
+  color: var(--cw-fg);
   font: inherit;
   line-height: 1;
+  cursor: pointer;
+  transition: background-color 100ms ease, color 100ms ease;
 }
 
-.cw-toolbar__button:hover:not(:disabled) {
+.cw-btn:hover:not(:disabled) {
   background: var(--cw-hover);
 }
 
-.cw-toolbar__button--on {
-  background: var(--cw-active);
-  border-color: #c2cedb;
+.cw-btn:focus-visible {
+  outline: 2px solid var(--cw-accent);
+  outline-offset: -1px;
 }
 
-.cw-toolbar__button:disabled {
-  opacity: 0.4;
+.cw-btn--on {
+  background: var(--cw-accent-soft);
+  color: var(--cw-accent);
+}
+
+.cw-btn--on:hover:not(:disabled) {
+  background: #dbe9fb;
+}
+
+.cw-btn:disabled {
+  opacity: 0.35;
   cursor: default;
+}
+
+.cw-btn__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+}
+
+.cw-btn__icon svg {
+  width: 18px;
+  height: 18px;
+  display: block;
 }
 
 .cw-toolbar__glyph {
   font-size: 14px;
-  line-height: 16px;
-  width: 16px;
+  font-weight: 600;
+  line-height: 18px;
+  width: 18px;
   text-align: center;
 }
 
-.cw-toolbar__caret {
+.cw-btn__caret {
   width: 0;
   height: 0;
+  margin-left: 1px;
   border-left: 3.5px solid transparent;
   border-right: 3.5px solid transparent;
   border-top: 4px solid currentColor;
-  opacity: 0.7;
+  opacity: 0.55;
 }
 
-.cw-toolbar__dropdown {
+/* Popovers --------------------------------------------------------------- */
+
+.cw-anchor {
   position: relative;
   display: inline-flex;
 }
 
-.cw-toolbar__panel {
+.cw-panel {
   position: absolute;
-  top: calc(100% + 2px);
+  top: calc(100% + 6px);
   left: 0;
   z-index: 40;
-  min-width: 160px;
-  max-height: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 200px;
+  max-width: calc(100vw - 24px);
+  max-height: min(60vh, 380px);
   overflow-y: auto;
-  padding: 4px;
-  background: #fff;
+  padding: 8px;
   border: 1px solid var(--cw-border);
-  border-radius: 2px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  border-radius: var(--cw-radius);
+  background: var(--cw-surface);
+  box-shadow: var(--cw-shadow-lg);
+  animation: cw-panel-in 120ms ease-out;
 }
 
-.cw-toolbar__panel--form,
-.cw-toolbar__panel .cw-toolbar__panel--form {
+.cw-panel--right {
+  left: auto;
+  right: 0;
+}
+
+@keyframes cw-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.cw-panel--menu,
+.cw-panel--overflow {
+  gap: 2px;
+  padding: 6px;
+}
+
+/* The link and image-URL forms need real room to type a URL in. */
+.cw-panel--form {
+  width: 340px;
+  min-width: 0;
+}
+
+.cw-panel__title {
+  padding: 0 2px;
+  color: var(--cw-fg-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cw-panel__note {
+  padding: 0 2px;
+  color: var(--cw-fg-muted);
+  font-size: 12px;
+}
+
+.cw-panel__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.cw-field {
   display: flex;
   align-items: center;
-  gap: 4px;
-  min-width: 260px;
+  gap: 6px;
+  min-width: 0;
 }
 
-.cw-toolbar__list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.cw-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--cw-border-strong);
+  border-radius: var(--cw-radius-sm);
+  background: var(--cw-surface);
+  color: var(--cw-fg);
+  font: inherit;
+  font-size: 13px;
 }
 
-.cw-toolbar__option,
-.cw-toolbar__swatch {
+.cw-input::placeholder {
+  color: #9aa6b2;
+}
+
+.cw-input:focus {
+  outline: none;
+  border-color: var(--cw-accent);
+  box-shadow: 0 0 0 3px var(--cw-accent-ring);
+}
+
+.cw-button {
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: var(--cw-radius-sm);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 100ms ease, border-color 100ms ease;
+}
+
+.cw-button--primary {
+  background: var(--cw-accent);
+  color: var(--cw-accent-fg);
+}
+
+.cw-button--primary:hover:not(:disabled) {
+  background: #0a68cd;
+}
+
+.cw-button--ghost {
+  background: transparent;
+  border-color: var(--cw-border-strong);
+  color: var(--cw-fg);
+}
+
+.cw-button--ghost:hover {
+  background: var(--cw-hover);
+}
+
+.cw-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.cw-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  border: 1px solid var(--cw-border-strong);
+  border-radius: var(--cw-radius-sm);
+  background: var(--cw-surface);
+  color: var(--cw-fg-muted);
+  cursor: pointer;
+}
+
+.cw-icon-btn:hover {
+  background: var(--cw-hover);
+  color: var(--cw-danger);
+}
+
+.cw-icon-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Menus ------------------------------------------------------------------ */
+
+.cw-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 168px;
+}
+
+.cw-menu__item {
   display: flex;
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 6px 10px;
+  min-height: 32px;
+  padding: 4px 8px;
   border: 0;
-  border-radius: 2px;
+  border-radius: var(--cw-radius-sm);
   background: transparent;
-  color: inherit;
-  cursor: pointer;
+  color: var(--cw-fg);
   font: inherit;
+  font-size: 13px;
   text-align: left;
-  white-space: nowrap;
+  cursor: pointer;
 }
 
-.cw-toolbar__option:hover:not(:disabled),
-.cw-toolbar__swatch:hover {
+.cw-menu__item:hover:not(:disabled) {
   background: var(--cw-hover);
 }
 
-.cw-toolbar__option:disabled {
+.cw-menu__item:disabled {
   opacity: 0.4;
   cursor: default;
 }
 
-.cw-toolbar__option--on {
-  background: var(--cw-active);
+.cw-menu__item--on {
+  color: var(--cw-accent);
+  font-weight: 500;
 }
 
-.cw-toolbar__swatch-preview {
+.cw-menu__item--danger:hover {
+  color: var(--cw-danger);
+}
+
+.cw-menu__label {
+  flex: 1 1 auto;
+  white-space: nowrap;
+}
+
+.cw-menu__hint,
+.cw-menu__empty {
+  color: var(--cw-fg-muted);
+  font-size: 12px;
+}
+
+.cw-menu__empty {
+  padding: 4px 8px 6px;
+}
+
+.cw-menu__check,
+.cw-menu__icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 2px;
-  font-size: 12px;
-  font-weight: 600;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
 }
 
-.cw-toolbar__input {
-  flex: 1;
+.cw-menu__check svg,
+.cw-menu__icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Highlight swatches ----------------------------------------------------- */
+
+.cw-panel--swatches {
   min-width: 0;
-  height: 28px;
-  padding: 0 8px;
-  border: 1px solid var(--cw-border);
-  border-radius: 2px;
-  font: inherit;
 }
 
-.cw-toolbar__action {
-  height: 28px;
-  padding: 0 10px;
-  border: 1px solid var(--cw-border);
-  border-radius: 2px;
-  background: #fff;
+.cw-swatches {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+}
+
+.cw-swatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--cw-radius-sm);
+  background: transparent;
   cursor: pointer;
-  font: inherit;
 }
 
-.cw-toolbar__action:hover {
+.cw-swatch:hover,
+.cw-swatch--on {
   background: var(--cw-hover);
 }
 
-.cw-toolbar__characters {
-  width: 300px;
+.cw-swatch--on {
+  box-shadow: inset 0 0 0 2px var(--cw-accent);
 }
 
-.cw-toolbar__character-group + .cw-toolbar__character-group {
-  margin-top: 8px;
+.cw-swatch__chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1f2937;
 }
 
-.cw-toolbar__character-label {
-  display: block;
-  margin-bottom: 4px;
-  color: #778da4;
-  font-size: 11px;
-  text-transform: uppercase;
+/* Special characters ----------------------------------------------------- */
+
+.cw-panel--characters {
+  width: 320px;
 }
 
-.cw-toolbar__character-grid {
+.cw-characters {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cw-characters__group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cw-characters__grid {
   display: grid;
   grid-template-columns: repeat(8, 1fr);
   gap: 2px;
 }
 
-.cw-toolbar__character {
-  height: 28px;
-  border: 1px solid transparent;
-  border-radius: 2px;
+.cw-character {
+  height: 30px;
+  border: 0;
+  border-radius: var(--cw-radius-sm);
   background: transparent;
-  cursor: pointer;
+  color: var(--cw-fg);
   font-size: 15px;
+  cursor: pointer;
 }
 
-.cw-toolbar__character:hover {
+.cw-character:hover {
   background: var(--cw-hover);
+}
+
+/* Touch and very narrow layouts ------------------------------------------ */
+
+@media (pointer: coarse) {
+  .cw-btn {
+    height: 36px;
+    min-width: 36px;
+  }
+
+  .cw-menu__item {
+    min-height: 38px;
+  }
+}
+
+@media (max-width: 420px) {
+  .cw-panel--form,
+  .cw-panel--characters {
+    width: calc(100vw - 32px);
+  }
+
+  .cw-characters__grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
 }
 
 /* Editing surface -------------------------------------------------------- */
@@ -247,14 +526,30 @@
   overflow-x: hidden;
   overflow-y: auto;
   min-height: 80px;
+  border-radius: 0 0 var(--cw-radius, 10px) var(--cw-radius, 10px);
+}
+
+/* The drag corner only shows when the host asks for a resizable editor. */
+.cw-editor__scroll[style*='resize'] {
+  resize: vertical;
 }
 
 .cw-editor__body {
   min-height: 100%;
-  padding: 10px 12px;
+  padding: 12px 14px;
   outline: none;
-  line-height: 1.5;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--cw-fg, #1f2937);
   word-break: break-word;
+}
+
+.cw-editor__body ::selection {
+  background: #cfe3fb;
+}
+
+.cw-editor__body a {
+  color: var(--cw-accent, #0b74e5);
 }
 
 .cw-editor__body p {
@@ -389,42 +684,160 @@
 
 /* Mention dropdown ------------------------------------------------------- */
 
+/*
+ * The rows themselves are rendered by the host's `itemRenderer` and styled by the
+ * host stylesheet (`.mention-list-item` and friends). What is owned here is the
+ * container: the panel, the scrolling list, the row states and the loading and
+ * empty rows.
+ *
+ * `box-sizing` is set for the whole subtree on purpose. CKEditor's stylesheet
+ * used to provide it for these rows; without it, a row with horizontal padding
+ * is wider than the list, which then scrolls sideways and clips the start of
+ * every label.
+ */
+.cw-mentions-panel,
+.cw-mentions-panel * {
+  box-sizing: border-box;
+}
+
 .cw-mentions-panel {
   position: absolute;
   z-index: 9999;
+  border: 1px solid #dfe4ec;
+  border-radius: 10px;
   background: #fff;
-  border: 1px solid var(--cw-border, #ccced1);
-  border-radius: 2px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 12px 28px -8px rgba(15, 23, 42, 0.22);
+  overflow: hidden;
 }
 
 .cw-mentions {
-  list-style: none;
-  margin: 0;
-  padding: 0;
   width: 360px;
-  max-height: 360px;
+  max-width: calc(100vw - 24px);
+  max-height: 340px;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  overflow-x: hidden;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .cw-mentions .ck-list__item {
   display: block;
+  width: 100%;
 }
 
+/* The rendered row: a block that fills the list and never widens it. */
 .cw-mentions .ck-list__item > * {
   display: block;
   width: 100%;
+  max-width: 100%;
   border: 0;
+  border-radius: 7px;
   background: transparent;
-  cursor: pointer;
+  color: inherit;
   font: inherit;
   text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.cw-mentions .ck-list__item > *:hover:not(.ck-disabled) {
+  background: #f1f5f9;
+}
+
+.cw-mentions .ck-list__item > .ck-on:not(.ck-disabled) {
+  background: #e7f1fd;
 }
 
 .cw-mentions .ck-list__item > .ck-disabled {
   cursor: default;
 }
 
-.cw-mentions .ck-list__item > .ck-on {
-  background: #eef1f4;
+/* Section header rows ("People >"), which drill down rather than insert. */
+.cw-mentions .mention-list-item--list-type {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cw-mentions .mentions-empty-message {
+  display: block;
+  padding: 10px 12px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+/* Loading rows -----------------------------------------------------------
+ * `.feed-loading` is the first request for a marker, `.pagination-loading` the
+ * next page. Both are host-rendered rows; the spinner is styled here so the
+ * package does not depend on the host stylesheet for it.
+ */
+.cw-mentions .feed-loading,
+.cw-mentions .pagination-loading,
+.cw-mentions__loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 12px;
+  color: #64748b;
+  font-size: 13px;
+  cursor: default;
+}
+
+/*
+ * Height matters here: the host watches this row with an IntersectionObserver to
+ * load the next page, and an out-of-flow spinner would leave it zero-height and
+ * never trigger.
+ */
+.cw-mentions .pagination-loading {
+  min-height: 44px;
+}
+
+.cw-mentions .feed-loading,
+.cw-mentions__loading {
+  min-height: 96px;
+}
+
+.cw-mentions .loading-spinner,
+.cw-mentions-panel .loading-spinner,
+.cw-mentions__spinner {
+  display: block;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  border: 2px solid #0b74e5;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: cw-spin 700ms linear infinite;
+
+  /*
+   * Hosts commonly define `.loading-spinner` as a centred overlay
+   * (`position: absolute; top: 50%; left: 50%`). Inside this panel it has to sit
+   * in the flow of its row instead, or it floats over the results and reads as a
+   * spinner that never finishes.
+   */
+  position: static;
+  top: auto;
+  right: auto;
+  bottom: auto;
+  left: auto;
+  margin: 0;
+  transform: none;
+}
+
+@keyframes cw-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cw-mentions .loading-spinner,
+  .cw-mentions__spinner {
+    animation-duration: 2s;
+  }
 }

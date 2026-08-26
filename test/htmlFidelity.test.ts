@@ -27,6 +27,15 @@ const FIXTURES: Array<[string, string]> = [
     'hash mention',
     '<p><a class="mention" data-mention="#Acme / CTO" data-resource-type="Project" data-resource-id="7" href="https://app.test/firm/projects/7">#Acme / CTO</a></p>'
   ],
+  [
+    'bold mention',
+    '<p><strong><a class="mention" data-mention="@Jane Doe" data-resource-type="Person" data-resource-id="42" href="https://app.test/firm/people/42">@Jane Doe</a></strong></p>'
+  ],
+  [
+    'mention inside a list item',
+    '<ul><li>Ask <a class="mention" data-mention="@Jane Doe" data-resource-type="Person" data-resource-id="42" href="https://app.test/firm/people/42">@Jane Doe</a></li></ul>'
+  ],
+  ['non-breaking space inside a sentence', '<p>Fee:&nbsp;30%</p>'],
   ['line break', '<p>First line<br>Second line</p>'],
   ['special characters', '<p>Fee: 33⅓% — see §4 (©2026)</p>'],
   ['multiple paragraphs', '<p>One</p><p>Two</p><p>Three</p>']

@@ -19,3 +19,6 @@ export declare const ImageResizeIcon: () => import("react").JSX.Element;
 export declare const SpecialCharactersIcon: () => import("react").JSX.Element;
 export declare const UndoIcon: () => import("react").JSX.Element;
 export declare const RedoIcon: () => import("react").JSX.Element;
+export declare const CheckIcon: () => import("react").JSX.Element;
+export declare const MoreIcon: () => import("react").JSX.Element;
+export declare const TrashIcon: () => import("react").JSX.Element;

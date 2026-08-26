@@ -30,6 +30,13 @@ export interface ClockworkEditorProps {
   /** Height of the scrolling content area, in px. */
   height?: number;
   resizable?: boolean;
+  /**
+   * Reports the height of the scrolling content area after the user drags the
+   * resize handle. It is the height of the very element `height` sizes, so
+   * feeding the value back in through `height` is stable: measuring an outer
+   * element instead would grow the editor on every round trip.
+   */
+  onResize?: (height: number) => void;
   className?: string;
   autoFocus?: boolean;
   /** Forces the content prop back into the editor, like CKEditor's `setData`. */
@@ -75,6 +82,7 @@ export const ClockworkEditor = forwardRef<ClockworkEditorApi | null, ClockworkEd
       onUploadError,
       height = 300,
       resizable = false,
+      onResize,
       className,
       autoFocus = false,
       enforcedUpdate = false
@@ -86,11 +94,14 @@ export const ClockworkEditor = forwardRef<ClockworkEditorApi | null, ClockworkEd
     const onChangeRef = useRef(onChange);
     const onReturnRef = useRef(onReturn);
     const uploadRef = useRef(upload);
+    const onResizeRef = useRef(onResize);
     const lastEmittedRef = useRef<string>(content);
+    const scrollRef = useRef<HTMLDivElement>(null);
 
     onChangeRef.current = onChange;
     onReturnRef.current = onReturn;
     uploadRef.current = upload;
+    onResizeRef.current = onResize;
 
     const initialContent = useMemo(() => normalize(content), []);
 
@@ -197,6 +208,30 @@ export const ClockworkEditor = forwardRef<ClockworkEditorApi | null, ClockworkEd
       [height, resizable]
     );
 
+    // Watches the element that `height` sizes, so a host that persists the
+    // reported height cannot feed a larger box back in.
+    useEffect(() => {
+      const element = scrollRef.current;
+      if (!element || !window.ResizeObserver) return;
+
+      let lastReported = element.getBoundingClientRect().height;
+
+      const observer = new ResizeObserver((entries) => {
+        const entry = entries[0];
+        if (!entry) return;
+
+        const next = Math.round(entry.contentRect.height);
+        if (!next || next === Math.round(lastReported)) return;
+
+        lastReported = next;
+        onResizeRef.current?.(next);
+      });
+
+      observer.observe(element);
+
+      return () => observer.disconnect();
+    }, []);
+
     const handleShellMouseDown = useCallback(() => {
       if (editor && !editor.isFocused && !disabled) editor.commands.focus();
     }, [editor, disabled]);
@@ -206,7 +241,7 @@ export const ClockworkEditor = forwardRef<ClockworkEditorApi | null, ClockworkEd
     return (
       <div className={`cw-editor${disabled ? ' cw-editor--disabled' : ''}${className ? ` ${className}` : ''}`} data-editor="tiptap">
         <Toolbar editor={editor as Editor} items={toolbarItems} config={config} />
-        <div className="cw-editor__scroll" style={contentStyle} onMouseDown={handleShellMouseDown}>
+        <div className="cw-editor__scroll" ref={scrollRef} style={contentStyle} onMouseDown={handleShellMouseDown}>
           <EditorContent editor={editor} />
         </div>
       </div>

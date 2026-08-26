@@ -29,8 +29,7 @@
     "dev": "vite build --watch",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "prepare": "yarn build"
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
@@ -52,6 +51,8 @@
   },
   "devDependencies": {
     "@floating-ui/dom": "^1",
+    "@testing-library/dom": "^10",
+    "@testing-library/react": "^16",
     "@types/node": "^26.2.0",
     "@types/react": "^18",
     "@types/react-dom": "^18",
